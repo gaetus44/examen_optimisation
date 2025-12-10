@@ -90,31 +90,22 @@ class Creature:
             final_y = next_y
             final_vx = self.vx
 
-            # --- CORRECTIF : Collision latérale ---
-            # Si on bouge horizontalement, on vérifie d'abord si on ne se prend pas
-            # le mur qui est à notre hauteur (avant de tomber en diagonale).
+            # Collision latérale (fix précédent)
             if self.vx != 0 and not self.level.is_valid_position(self.x + self.vx, self.y):
-                # Il y a un mur à côté ! On tape le mur et on tombe tout droit.
                 final_x = self.x
                 final_vx = 0
-
             # Sinon, on vérifie la case d'arrivée normale
             elif not self.level.is_valid_position(next_x, next_y):
-                # La case diagonale est bloquée (mais pas le mur latéral direct)
                 if self.level.is_valid_position(self.x, next_y):
                     final_x = self.x
                 else:
                     final_y = self.y
                     final_vx = 0
 
-            # Sécurité bas de map
             if final_y < 0: final_y = 0
 
             moves.append({
-                'x': final_x,
-                'y': final_y,
-                'vx': final_vx,
-                'type': 'air'
+                'x': final_x, 'y': final_y, 'vx': final_vx, 'type': 'air'
             })
 
         # --- CAS 2 : AU SOL (Choix du joueur) ---
@@ -128,17 +119,32 @@ class Creature:
             for dx, dy in actions:
                 target_x = self.x + dx
                 target_y = self.y + dy
-
                 new_vx = dx if dx != 0 else 0
 
-                # On vérifie juste si la case cible est libre (et pas un mur)
-                if self.level.is_valid_position(target_x, target_y):
-                    moves.append({
-                        'x': target_x,
-                        'y': target_y,
-                        'vx': new_vx,
-                        'type': 'ground'
-                    })
+                # 1. Vérification de base : La cible est-elle valide ?
+                if not self.level.is_valid_position(target_x, target_y):
+                    continue
+
+                # 2. --- CORRECTIF : Vérification des coins (Diagonales) ---
+                # Si c'est un mouvement diagonal (dx et dy ne sont pas 0)
+                if dx != 0 and dy != 0:
+                    # Règle : Pour sauter en diagonale vers le HAUT,
+                    # il ne faut pas avoir de plafond direct au-dessus.
+                    if dy == 1 and self.level.is_obstacle(self.x, self.y + 1):
+                        continue # Plafond bloquant, on saute cette action
+
+                    # Règle : Pour descendre en diagonale vers le BAS,
+                    # il ne faut pas avoir de mur direct sur le côté vers lequel on va.
+                    if dy == -1 and self.level.is_obstacle(self.x + dx, self.y):
+                        continue # Mur bloquant le passage, on saute
+
+                # Si toutes les vérifications passent, on ajoute le coup
+                moves.append({
+                    'x': target_x,
+                    'y': target_y,
+                    'vx': new_vx,
+                    'type': 'ground'
+                })
 
         return moves
 
@@ -153,9 +159,8 @@ class Creature:
             self.reached_goal = True
             print(">>> GAGNÉ ! <<<")
 
-        # Check mort (si on tombe sous 0, bien que le clamp évite le crash)
         if self.y == 0 and self.level.is_out_of_bounds(self.x, -1):
-            pass  # Techniquement safe ici grace au clamp
+            pass
 
 
 # --- VISUALISATION ---
@@ -204,7 +209,6 @@ def draw(screen, level, creature, moves):
 
 
 def main():
-    # Vérifier que le fichier existe, sinon erreur.
     try:
         lvl = Level("level.txt")
     except FileNotFoundError:
@@ -229,19 +233,15 @@ def main():
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mx, my = pygame.mouse.get_pos()
-                # Trouver quelle case a été cliquée
                 clicked_gx = mx // TILE_SIZE
-                # Inversion Y pour retrouver la grille
                 clicked_gy = (lvl.height - 1) - (my // TILE_SIZE)
 
-                # Vérifier si c'est un coup valide
                 chosen_move = None
                 for m in possible_moves:
                     if m['x'] == clicked_gx and m['y'] == clicked_gy:
                         chosen_move = m
                         break
 
-                # Si en l'air, n'importe quel clic valide le mouvement forcé (confort utilisateur)
                 if not chosen_move and creature.is_in_air() and possible_moves:
                     chosen_move = possible_moves[0]
 
