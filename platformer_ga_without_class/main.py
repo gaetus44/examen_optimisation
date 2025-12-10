@@ -82,20 +82,32 @@ class Creature:
 
         # --- CAS 1 : EN L'AIR (Mouvement Forcé) ---
         if self.is_in_air():
-            # ... (Code inchangé pour la partie air) ...
+            # Calcul théorique de la destination
             next_x = self.x + self.vx
             next_y = self.y - 1
 
-            final_x, final_y = next_x, next_y
+            final_x = next_x
+            final_y = next_y
             final_vx = self.vx
 
-            if not self.level.is_valid_position(next_x, next_y):
+            # --- CORRECTIF : Collision latérale ---
+            # Si on bouge horizontalement, on vérifie d'abord si on ne se prend pas
+            # le mur qui est à notre hauteur (avant de tomber en diagonale).
+            if self.vx != 0 and not self.level.is_valid_position(self.x + self.vx, self.y):
+                # Il y a un mur à côté ! On tape le mur et on tombe tout droit.
+                final_x = self.x
+                final_vx = 0
+
+            # Sinon, on vérifie la case d'arrivée normale
+            elif not self.level.is_valid_position(next_x, next_y):
+                # La case diagonale est bloquée (mais pas le mur latéral direct)
                 if self.level.is_valid_position(self.x, next_y):
                     final_x = self.x
                 else:
                     final_y = self.y
                     final_vx = 0
 
+            # Sécurité bas de map
             if final_y < 0: final_y = 0
 
             moves.append({
@@ -107,12 +119,10 @@ class Creature:
 
         # --- CAS 2 : AU SOL (Choix du joueur) ---
         else:
-            # J'ai ajouté ici les diagonales vers le bas : (-1, -1) et (1, -1)
-            # Et aussi tout droit vers le bas (0, -1) si jamais il y a un trou direct
             actions = [
                 (0, 0), (-1, 0), (1, 0),  # Sur place, Gauche, Droite
                 (0, 1), (-1, 1), (1, 1),  # Sauts (Haut, Gauche, Droite)
-                (-1, -1), (1, -1), (0, -1)  # <--- AJOUT : Bas-Gauche, Bas-Droite, Bas
+                (-1, -1), (1, -1), (0, -1)  # Bas-Gauche, Bas-Droite, Bas
             ]
 
             for dx, dy in actions:
