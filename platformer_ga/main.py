@@ -5,10 +5,10 @@ import math
 import os
 
 # --- IMPORTATION DES RÈGLES ---
-# Import direct sans vérification (le fichier doit être présent)
+# Le fichier rules.py doit être dans le même dossier
 from rules import Level, Creature, TILE_SIZE, WHITE, BLACK, GRAY, RED, GREEN, BLUE
 
-# --- CONFIGURATION VISUELLE SUPPLÉMENTAIRE ---
+# --- CONFIGURATION VISUELLE ---
 TRANSPARENT_BLUE = (50, 100, 250, 50)
 
 # --- PARAMÈTRES GÉNÉTIQUES ---
@@ -19,9 +19,6 @@ ELITISM_COUNT = 5
 
 # --- HELPER: CRÉATION FICHIER LEVEL ---
 def create_default_level_if_missing(filename="level.txt"):
-    """
-    Crée un niveau par défaut si absent, compatible avec le parser de rules.py.
-    """
     if not os.path.exists(filename):
         content = """60
 20 15
@@ -58,13 +55,36 @@ class DNA:
         self.genes = [random.randint(0, 100) for _ in range(length)]
 
     def mutate(self, rate):
+        """
+        Applique une mutation standard + une chance de 'décalage temporel' (Shift).
+        """
+        # 1. Mutation Standard (Modification ponctuelle)
+        # Permet de découvrir de nouveaux mouvements (Exploration)
         for i in range(self.length):
             if random.random() < rate:
                 self.genes[i] = random.randint(0, 100)
 
+        # 2. Mutation de Décalage (SHIFT) - Timing
+        # Permet de recaler une bonne séquence (Exploitation/Correction)
+        # 10% de chance qu'un décalage arrive sur cet individu
+        if random.random() < 0.10:
+
+            if random.random() < 0.5:
+                # --- SHIFT GAUCHE (Agir plus tôt) ---
+                # On enlève la première action (le début)
+                # On ajoute une action aléatoire à la fin pour combler le vide
+                self.genes.pop(0)
+                self.genes.append(random.randint(0, 100))
+            else:
+                # --- SHIFT DROITE (Agir plus tard) ---
+                # On enlève la dernière action (la fin)
+                # On insère une action aléatoire au début pour repousser le reste
+                self.genes.pop()  # Retire le dernier
+                self.genes.insert(0, random.randint(0, 100))
+
 
 class Agent:
-    """Wrapper liant une Créature (Physique) et son ADN (Intelligence)."""
+    """Lien entre l'algo génétique et la créature (les règles)"""
 
     def __init__(self, level, dna=None):
         self.creature = Creature(level)
@@ -120,38 +140,59 @@ class Agent:
         return score
 
 
-# --- FONCTIONS D'ÉVOLUTION ---
+# --- FONCTIONS D'ÉVOLUTION (ROULETTE EXPONENTIELLE) ---
+
+def get_parent_roulette(agents, weights, total_weight):
+    """
+    Sélectionne un parent en utilisant les poids (fitness exponentiel).
+    """
+    pick = random.uniform(0, total_weight)
+    current = 0
+
+    for agent, weight in zip(agents, weights):
+        current += weight
+        if current > pick:
+            return agent
+
+    return agents[-1]  # Sécurité
+
 
 def evolve(agents, level):
     # 1. Évaluation
     scores = [a.calculate_fitness() for a in agents]
 
-    # 2. Elitisme
+    # 2. Tri (nécessaire pour l'élitisme)
     sorted_agents = sorted(agents, key=lambda x: x.fitness, reverse=True)
     best_agent_prev_gen = sorted_agents[0]
 
     new_agents = []
 
+    # Elitisme (On garde les meilleurs absolus)
     for i in range(ELITISM_COUNT):
         new_dna = DNA(level.n_ticks)
         new_dna.genes = sorted_agents[i].dna.genes[:]
         new_agents.append(Agent(level, new_dna))
 
-    # 3. Création du pool de reproduction
-    parents_pool = sorted_agents[:POPULATION_SIZE // 2]
+    # --- ROULETTE EXPONENTIELLE ---
+    # On élève le fitness exposant 4 pour favoriser les meilleurs
+    EXPONENT = 4
 
-    # 4. Reproduction
+    weights = [a.fitness ** EXPONENT for a in sorted_agents]
+    total_weight = sum(weights)
+
+    # 3. Reproduction
     while len(new_agents) < POPULATION_SIZE:
-        parent_a = random.choice(parents_pool)
-        parent_b = random.choice(parents_pool)
+        # Sélection
+        parent_a = get_parent_roulette(sorted_agents, weights, total_weight)
+        parent_b = get_parent_roulette(sorted_agents, weights, total_weight)
 
         child_dna = DNA(level.n_ticks)
 
-        # Crossover
+        # Crossover (Point unique)
         midpoint = random.randint(0, level.n_ticks - 1)
         child_dna.genes = parent_a.dna.genes[:midpoint] + parent_b.dna.genes[midpoint:]
 
-        # Mutation
+        # Mutation (Standard + Shift)
         child_dna.mutate(MUTATION_RATE)
 
         new_agents.append(Agent(level, child_dna))
@@ -214,12 +255,12 @@ def draw_agents(screen, agents, level, best_agent=None):
 def main():
     create_default_level_if_missing("level.txt")
 
-    # Chargement direct du niveau sans try/except inutile
+    # Chargement
     lvl = Level("level.txt")
 
     pygame.init()
     screen = pygame.display.set_mode((lvl.width * TILE_SIZE, lvl.height * TILE_SIZE))
-    pygame.display.set_caption("IA Évolutive - Utilise rules.py")
+    pygame.display.set_caption("IA Évolutive - Shift Mutation & Roulette")
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("Arial", 18)
 
