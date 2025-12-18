@@ -1,10 +1,11 @@
+# genes.py
 class ConnectionGene:
     def __init__(self, in_node, out_node, weight, enabled, innovation):
         self.in_node = in_node
         self.out_node = out_node
         self.weight = weight
         self.enabled = enabled
-        self.innovation = innovation  # ²Le "code barre" historique du gène
+        self.innovation = innovation
 
     def copy(self):
         return ConnectionGene(self.in_node, self.out_node, self.weight, self.enabled, self.innovation)

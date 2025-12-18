@@ -1,249 +1,120 @@
 # main.py
-import random
-import math
-import sys
-import pygame
+import random, math, sys, pygame
 import config
-
-# Import du moteur de jeu existant (SANS MODIFICATION)
-from rules import Level, Creature, draw, TILE_SIZE, WHITE, BLACK
+from rules import Level, Creature, draw, TILE_SIZE, BLACK
 from genome import Genome
 from network import FeedForwardNetwork
 
-# Liste des actions théoriques (Doit correspondre EXACTEMENT à rules.py lignes 115-117)
-# (dx, dy)
-ACTIONS_MAP = [
-    (0, 0), (-1, 0), (1, 0),  # Sur place, Gauche, Droite
-    (0, 1), (-1, 1), (1, 1),  # Sauts (Haut, Gauche, Droite)
-    (-1, -1), (1, -1), (0, -1)  # Bas-Gauche, Bas-Droite, Bas
-]
-
+ACTIONS_MAP = [(0,0),(-1,0),(1,0),(0,1),(-1,1),(1,1),(-1,-1),(1,-1),(0,-1)]
 
 class InnovationCounter:
     def __init__(self):
-        self.current_innovation = 0
-        self.history = {}
+        self.current, self.history = 0, {}
+    def get_innovation(self, n1, n2):
+        if (n1, n2) not in self.history: self.current += 1; self.history[(n1, n2)] = self.current
+        return self.history[(n1, n2)]
 
-    def get_innovation(self, in_node, out_node):
-        key = (in_node, out_node)
-        if key in self.history:
-            return self.history[key]
-        self.current_innovation += 1
-        self.history[key] = self.current_innovation
-        return self.current_innovation
-
-
-class GameRunner:
-    def __init__(self, level_path="level.txt"):
-        self.level_path = level_path
-        self.base_level = Level(level_path)  # On charge une fois pour lire les dimensions
-
-    def get_distance(self, c_x, c_y, g_x, g_y):
-        return math.sqrt((g_x - c_x) ** 2 + (g_y - c_y) ** 2)
-
-    def run_genome(self, genome, draw_mode=False):
-        """
-        Exécute une simulation complète pour un génome.
-        Retourne la fitness (score).
-        Si draw_mode=True, affiche le jeu avec Pygame.
-        """
-        # Réinitialisation propre du niveau et de la créature à chaque test
-        level = Level(self.level_path)
-        creature = Creature(level)
-        net = FeedForwardNetwork(genome)
-
-        screen = None
-        clock = None
-        if draw_mode:
-            pygame.init()
-            screen = pygame.display.set_mode((level.width * TILE_SIZE, level.height * TILE_SIZE))
-            pygame.display.set_caption(f"Replay Genome ID: {genome.id}")
-            clock = pygame.time.Clock()
-
-        # Distance initiale pour calculer le progrès
-        start_dist = self.get_distance(creature.x, creature.y, level.goal_pos[0], level.goal_pos[1])
-
-        # Boucle de jeu (limitée par le nombre de ticks du niveau)
-        while creature.tick < level.n_ticks:
-
-            # Gestion basique des événements Pygame (pour pouvoir fermer la fenêtre)
-            if draw_mode:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        pygame.quit()
-                        sys.exit()
-
-            # 1. Obtenir les coups possibles du moteur physique
-            possible_moves = creature.get_possible_moves()
-
-            # Si plus de coups possibles (bloqué ou mort), fin.
-            if not possible_moves:
-                break
-
-            chosen_move = None
-
-            # --- LOGIQUE DE DÉCISION ---
-            if creature.is_in_air():
-                # CAS 1 : EN L'AIR -> Mouvement forcé par la physique
-                # On prend le seul mouvement disponible (la chute/inertie)
-                if possible_moves:
-                    chosen_move = possible_moves[0]
-            else:
-                # CAS 2 : AU SOL -> Le Réseau de Neurones décide
-
-                # A. Préparation des Entrées (Inputs)
-                # Normalisation des valeurs entre 0 et 1 (ou -1 et 1) pour le réseau
-                norm_x = creature.x / level.width
-                norm_y = creature.y / level.height
-                dist_x = (level.goal_pos[0] - creature.x) / level.width
-                dist_y = (level.goal_pos[1] - creature.y) / level.height
-
-                inputs = [norm_x, norm_y, dist_x, dist_y]
-
-                # B. Activation du réseau
-                outputs = net.activate(inputs)  # Retourne une liste de 9 valeurs
-
-                # C. Sélection de l'action
-                # On associe chaque output à une action théorique via ACTIONS_MAP
-                # On trie les actions par la valeur de sortie (du plus fort au plus faible)
-                indexed_outputs = []
-                for i, val in enumerate(outputs):
-                    indexed_outputs.append((val, i))
-
-                # Tri décroissant (la plus grande valeur d'abord)
-                indexed_outputs.sort(key=lambda x: x[0], reverse=True)
-
-                # D. Trouver le premier mouvement VALIDE parmi les souhaits du réseau
-                for val, idx in indexed_outputs:
-                    desired_dx, desired_dy = ACTIONS_MAP[idx]
-
-                    # On cherche si ce (dx, dy) correspond à un coup valide réel
-                    found = False
-                    for move in possible_moves:
-                        # move['x'] est la destination absolue. On recalcule le delta.
-                        real_dx = move['x'] - creature.x
-                        real_dy = move['y'] - creature.y
-
-                        if real_dx == desired_dx and real_dy == desired_dy:
-                            chosen_move = move
-                            found = True
-                            break
-
-                    if found:
-                        break  # On a trouvé le meilleur coup valide
-
-                # Sécurité : Si le réseau ne trouve rien (rare), on ne bouge pas ou 1er coup
-                if not chosen_move and possible_moves:
-                    chosen_move = possible_moves[0]
-
-            # Application du mouvement
-            if chosen_move:
-                creature.apply_move(chosen_move)
-
-            # Dessin
-            if draw_mode and screen:
-                draw(screen, level, creature, possible_moves)
-                pygame.display.flip()
-                clock.tick(20)  # Vitesse de replay (15 FPS pour bien voir)
-
-            # Condition de victoire
-            if creature.reached_goal:
-                break
-
-        # --- CALCUL DE LA FITNESS ---
-        end_dist = self.get_distance(creature.x, creature.y, level.goal_pos[0], level.goal_pos[1])
-
-        # Score basé sur la distance parcourue (Plus on réduit la distance, mieux c'est)
-        # start_dist ~ 15.0. Si on arrive à 0, on gagne environ 15 points.
-        fitness = (start_dist - end_dist)
-
-        # Gros bonus si gagné
-        if creature.reached_goal:
-            fitness += 50.0  # Bonus victoire
-            # Petit bonus de vitesse (plus il reste de ticks, mieux c'est)
-            fitness += (level.n_ticks - creature.tick) * 0.1
-
-        # On évite les fitness négatives
-        return max(0.0, fitness)
-
+class Species:
+    def __init__(self, rep):
+        self.representative, self.members, self.best_fitness, self.stagnation = rep, [rep], 0.0, 0
+    def sort_and_update(self):
+        self.members.sort(key=lambda x: x.fitness, reverse=True)
+        if self.members[0].fitness > self.best_fitness: self.best_fitness, self.stagnation = self.members[0].fitness, 0
+        else: self.stagnation += 1
+        self.representative = self.members[0]
 
 class Population:
     def __init__(self, size):
-        self.genomes = []
-        self.innovation_counter = InnovationCounter()
-        self.runner = GameRunner("level.txt")  # Gestionnaire du jeu
-
-        # Init population
+        self.size, self.genomes, self.species, self.innov = size, [], [], InnovationCounter()
+        self.runner = GameRunner()
         for i in range(size):
-            g = Genome(i)
-            # Init avec INPUTS et OUTPUTS du config
-            g.init_simple(config.INPUTS, config.OUTPUTS, self.innovation_counter)
-            self.genomes.append(g)
+            g = Genome(i); g.init_simple(config.INPUTS, config.OUTPUTS, self.innov); self.genomes.append(g)
+
+    def speciate(self):
+        for s in self.species: s.members = []
+        for g in self.genomes:
+            found = False
+            for s in self.species:
+                if g.get_distance(s.representative) < config.DISTANCE_THRESHOLD: s.members.append(g); found = True; break
+            if not found: self.species.append(Species(g))
+        self.species = [s for s in self.species if s.members]
 
     def run(self):
         for gen in range(config.MAX_GENERATIONS):
-            # 1. Évaluer Fitness pour toute la population
-            best_gen_fitness = -1000
-            best_genome = None
-
-            for genome in self.genomes:
-                # Lancer le jeu sans graphismes (rapide)
-                genome.fitness = self.runner.run_genome(genome, draw_mode=False)
-
-                if genome.fitness > best_gen_fitness:
-                    best_gen_fitness = genome.fitness
-                    best_genome = genome
-
-            print(
-                f"Gen {gen}: Best Fitness = {best_gen_fitness:.4f} | Neurones: {len(best_genome.nodes)} | Connexions: {len(best_genome.connections)}")
-
-            # Visualiser le champion de la génération
-            # (Optionnel : on peut le faire tous les 10 tours ou si le score est bon)
-            print(f"   -> Replay du champion (ID: {best_genome.id})...")
-            self.runner.run_genome(best_genome, draw_mode=True)
-
-            # Si on a un score très élevé (Victoire + marge), on peut arrêter ou continuer
-            if best_gen_fitness > 45:
-                print(">>> PERFORMANCE EXCEPTIONNELLE ATTEINTE <<<")
-
-            # 2. Sélection et Reproduction
-            self.genomes.sort(key=lambda x: x.fitness, reverse=True)
-
-            # ÉLITISME : Garder les 20% meilleurs
-            cutoff = int(config.POPULATION_SIZE * 0.2)
-            cutoff = max(2, cutoff)
-            survivors = self.genomes[:cutoff]
-
-            next_gen_genomes = []
-
-            # On garde le Top 1 tel quel
-            next_gen_genomes.append(survivors[0])
-
-            while len(next_gen_genomes) < config.POPULATION_SIZE:
-                parent1 = random.choice(survivors)
-                parent2 = random.choice(survivors)
-
-                if parent1.fitness < parent2.fitness:
-                    parent1, parent2 = parent2, parent1
-
-                child = Genome.crossover(parent1, parent2)
-                child.mutate(self.innovation_counter)
-                child.id = len(next_gen_genomes) + (gen * config.POPULATION_SIZE)  # ID unique
-                next_gen_genomes.append(child)
-
-            self.genomes = next_gen_genomes
-
+            self.speciate()
+            best_g, max_f = None, -1
+            for g in self.genomes:
+                g.fitness = self.runner.run_genome(g)
+                if g.fitness > max_f: max_f, best_g = g.fitness, g
+            for s in self.species:
+                for g in s.members: g.adjusted_fitness = g.fitness / len(s.members)
+                s.sort_and_update()
+            print(f"Gen {gen}: Best={max_f:.2f} | Species={len(self.species)}")
+            if gen % 10 == 0: self.runner.run_genome(best_g, True)
+            if len(self.species) > 2: self.species = [s for s in self.species if s.stagnation < config.STAGNATION_LIMIT]
+            next_gen = [best_g]
+            for s in self.species:
+                if s.members[0] != best_g: next_gen.append(s.members[0])
+            total_adj = sum(g.adjusted_fitness for g in self.genomes)
+            if total_adj > 0:
+                for s in self.species:
+                    s_adj = sum(g.adjusted_fitness for g in s.members)
+                    n_child = int((s_adj / total_adj) * self.size) - 1
+                    for _ in range(max(0, n_child)):
+                        if len(next_gen) >= self.size: break
+                        p1 = self.select(s.members)
+                        p2 = self.select(self.genomes) if random.random() < config.PROB_INTERSPECIES_MATE else self.select(s.members)
+                        if p2.fitness > p1.fitness: p1, p2 = p2, p1
+                        child = Genome.crossover(p1, p2); child.mutate(self.innov)
+                        child.id = len(next_gen) + gen*self.size; next_gen.append(child)
+            while len(next_gen) < self.size:
+                p = random.choice(self.genomes); c = Genome.crossover(p, p); c.mutate(self.innov); c.id = len(next_gen) + gen*self.size; next_gen.append(c)
+            self.genomes = next_gen
         pygame.quit()
 
+    def select(self, members):
+        total = sum(m.fitness for m in members)
+        if total == 0: return random.choice(members)
+        r, cur = random.uniform(0, total), 0
+        for m in members:
+            cur += m.fitness
+            if cur >= r: return m
+        return members[0]
+
+class GameRunner:
+    def run_genome(self, genome, draw_mode=False):
+        lvl = Level("level.txt"); c = Creature(lvl); net = FeedForwardNetwork(genome)
+        if draw_mode: pygame.init(); screen = pygame.display.set_mode((lvl.width*TILE_SIZE, lvl.height*TILE_SIZE)); clock = pygame.time.Clock()
+        start_dist = math.sqrt((lvl.goal_pos[0]-c.x)**2 + (lvl.goal_pos[1]-c.y)**2)
+        while c.tick < lvl.n_ticks and not c.reached_goal:
+            if draw_mode:
+                for e in pygame.event.get():
+                    if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+            moves = c.get_possible_moves()
+            if not moves: break
+            if c.is_in_air(): chosen = moves[0]
+            else:
+                # INJECTION DU BIAIS ICI : 5ème entrée à 1.0
+                inputs = [
+                    c.x/lvl.width,
+                    c.y/lvl.height,
+                    (lvl.goal_pos[0]-c.x)/lvl.width,
+                    (lvl.goal_pos[1]-c.y)/lvl.height,
+                    1.0 # LE BIAIS
+                ]
+                out = net.activate(inputs)
+                prefs = sorted(enumerate(out), key=lambda x: x[1], reverse=True)
+                chosen = moves[0]
+                for idx, v in prefs:
+                    dx, dy = ACTIONS_MAP[idx]
+                    found = [m for m in moves if (m['x']-c.x)==dx and (m['y']-c.y)==dy]
+                    if found: chosen = found[0]; break
+            c.apply_move(chosen)
+            if draw_mode: draw(screen, lvl, c, moves); pygame.display.flip(); clock.tick(30)
+        dist = math.sqrt((lvl.goal_pos[0]-c.x)**2 + (lvl.goal_pos[1]-c.y)**2)
+        fitness = max(0, start_dist - dist)
+        if c.reached_goal: fitness += 50 + (lvl.n_ticks - c.tick) * 0.1
+        return fitness
 
 if __name__ == "__main__":
-    # Vérification fichier level
-    try:
-        with open("level.txt", "r"):
-            pass
-    except FileNotFoundError:
-        print("Erreur: level.txt introuvable.")
-        sys.exit()
-
-    pop = Population(config.POPULATION_SIZE)
-    pop.run()
+    pop = Population(config.POPULATION_SIZE); pop.run()

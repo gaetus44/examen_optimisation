@@ -25,7 +25,7 @@ class Level:
         self.goal_pos = (0, 0)
         self.load_from_file(filepath)
 
-    def load_from_file(self, filepath):
+    def load_from_file(self, filepath): #construit la map du jeu
         try:
             with open(filepath, 'r') as f:
                 lines = [l.strip() for l in f if l.strip()]
@@ -45,10 +45,10 @@ class Level:
             sys.exit()
 
     def is_obstacle(self, x, y):
-        return (x, y) in self.obstacles
+        return (x, y) in self.obstacles #suis-je un mur ?
 
     def is_out_of_bounds(self, x, y):
-        return x < 0 or x >= self.width or y < 0 or y >= self.height
+        return x < 0 or x >= self.width or y < 0 or y >= self.height #suis-je toujours dans l'écran
 
     def is_valid_position(self, x, y):
         return not self.is_out_of_bounds(x, y) and not self.is_obstacle(x, y)
@@ -57,34 +57,34 @@ class Level:
 class Creature:
     def __init__(self, level):
         self.level = level
-        self.x, self.y = level.start_pos
-        self.vx = 0
+        self.x, self.y = level.start_pos #position acutelle du joueur
+        self.vx = 0 #vitesse horizontale (utile en l'air pour l'intertie)
         self.is_dead = False
         self.reached_goal = False
-        self.tick = 0
+        self.tick = 0 #temps écoulé depuis le départ
         self.path = [(self.x, self.y)]
 
     def is_in_air(self):
-        # En l'air si y > 0 ET pas d'obstacle en dessous
+        # En l'air si y > -1 n'est pas une case
         if self.y > 0:
             return not self.level.is_obstacle(self.x, self.y - 1)
         return False
 
-    def get_possible_moves(self):
+    def get_possible_moves(self): #gère les mouvement possible
         """
         Retourne une liste de dictionnaires :
         [{'x': int, 'y': int, 'vx': int, 'type': 'ground'|'air'}]
         """
         moves = []
 
-        if self.is_dead or self.reached_goal:
+        if self.is_dead or self.reached_goal:#arrête le code si créature morte ou réussie
             return moves
 
         # --- CAS 1 : EN L'AIR (Mouvement Forcé) ---
-        if self.is_in_air():
+        if self.is_in_air():#la créature ne fait rien -> application de la gravité et de l'inertie
             # Calcul théorique de la destination
-            next_x = self.x + self.vx
-            next_y = self.y - 1
+            next_x = self.x + self.vx #applique l'inertie
+            next_y = self.y - 1#applique la gravité
 
             final_x = next_x
             final_y = next_y
