@@ -52,6 +52,7 @@ class DNA:
 
     def __init__(self, length):
         self.length = length
+        # Une liste d'entiers aléatoires entre 0 et 100
         self.genes = [random.randint(0, 100) for _ in range(length)]
 
     def mutate(self, rate):
@@ -111,6 +112,7 @@ class Agent:
 
         # 2. Utiliser l'ADN pour choisir un mouvement
         gene_val = self.dna.genes[self.creature.tick]
+        # Modulo permet de toujours avoir un index valide
         chosen_move = moves[gene_val % len(moves)]
 
         # 3. Appliquer le mouvement via la méthode de rules.py
@@ -127,6 +129,7 @@ class Agent:
             score = 10000 + (self.creature.level.n_ticks - self.creature.tick) * 50
         else:
             # Plus on est près, meilleur est le score
+            # Formule : 100 / (distance + 1)
             score = 100.0 / (dist + 1.0)
 
             # Bonus pour la progression en X (encourage à avancer vers la droite)
@@ -167,7 +170,7 @@ def evolve(agents, level):
 
     new_agents = []
 
-    # Elitisme (On garde les meilleurs absolus)
+    # Elitisme (On garde les meilleurs absolus) ELITISM_COUNT = 5
     for i in range(ELITISM_COUNT):
         new_dna = DNA(level.n_ticks)
         new_dna.genes = sorted_agents[i].dna.genes[:]
@@ -192,13 +195,15 @@ def evolve(agents, level):
 
         child_dna = DNA(level.n_ticks)
 
-        # Crossover (Point unique)
+        # Crossover (Point unique) point de coupure au hasard
         midpoint = random.randint(0, level.n_ticks - 1)
+        # Recolle (Début de A + Fin de B)
         child_dna.genes = parent_a.dna.genes[:midpoint] + parent_b.dna.genes[midpoint:]
 
         # Mutation (Standard + Shift)
         child_dna.mutate(MUTATION_RATE)
 
+        #Ajouter l'enfant a la nouvelle population
         new_agents.append(Agent(level, child_dna))
 
     return new_agents, best_agent_prev_gen
@@ -264,7 +269,7 @@ def main():
 
     pygame.init()
     screen = pygame.display.set_mode((lvl.width * TILE_SIZE, lvl.height * TILE_SIZE))
-    pygame.display.set_caption("IA Évolutive - Shift Mutation & Roulette")
+    pygame.display.set_caption("Platformer GA - Lvl: 1")
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("Arial", 18)
 

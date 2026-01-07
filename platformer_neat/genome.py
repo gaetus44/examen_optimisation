@@ -24,7 +24,18 @@ class Genome:
                 self.connections.append(ConnectionGene(i, num_inputs + j, weight, True, innov))
 
     def get_distance(self, other):
-        """Calcule la distance génétique pour la spéciation."""
+        """
+        Calcule la distance génétique entre deux génomes pour la spéciation.
+
+        Compare les gènes de connexion en utilisant leurs numéros d'innovation :
+        - Les gènes communs (Matching) : On calcule la différence de poids.
+        - Les gènes uniques (Disjoint/Excess) : On compte les différences de structure.
+
+        Returns:
+            float: Une valeur représentant la divergence entre les deux réseaux.
+                   Si distance > DISTANCE_THRESHOLD, ils sont d'espèces différentes.
+        """
+
         genes1 = sorted(self.connections, key=lambda c: c.innovation)
         genes2 = sorted(other.connections, key=lambda c: c.innovation)
 
