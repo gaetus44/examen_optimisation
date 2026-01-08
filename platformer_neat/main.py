@@ -98,6 +98,8 @@ class Population:
         pygame.quit()
 
     def select(self, members):
+        """ Un peu comme le système de roulette, les individus avec un plus grand fitness
+        ont plus de chance d'être parent. """
         total = sum(m.fitness for m in members)
         if total == 0: return random.choice(members)
         r, cur = random.uniform(0, total), 0
