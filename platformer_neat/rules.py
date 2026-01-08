@@ -2,7 +2,7 @@ import pygame
 import sys
 
 # --- CONFIGURATION ---
-TILE_SIZE = 60
+TILE_SIZE = 35
 WHITE = (255, 255, 255)
 BLACK = (20, 20, 20)
 GRAY = (100, 100, 100)
@@ -210,9 +210,9 @@ def draw(screen, level, creature, moves):
 
 def main():
     try:
-        lvl = Level("level.txt")
+        lvl = Level("level3.txt")
     except FileNotFoundError:
-        print("Erreur: Le fichier 'level.txt' est manquant dans le dossier du projet.")
+        print("Erreur: Le fichier 'level1.txt' est manquant dans le dossier du projet.")
         return
 
     creature = Creature(lvl)
