@@ -2,7 +2,7 @@ import pygame
 import sys
 
 # --- CONFIGURATION ---
-TILE_SIZE = 60
+TILE_SIZE = 35
 WHITE = (255, 255, 255)
 BLACK = (20, 20, 20)
 GRAY = (100, 100, 100)
