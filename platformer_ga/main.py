@@ -202,10 +202,6 @@ def evolve(agents, level):
         parent_a = get_parent_roulette(sorted_agents, weights, total_weight)
         parent_b = get_parent_roulette(sorted_agents, weights, total_weight)
 
-        # Verification si les 2 sont pas les mêmes ont retire au sort le parent b
-        while parent_a == parent_b:
-            parent_b = get_parent_roulette(sorted_agents, weights, total_weight)
-
         child_dna = DNA(level.n_ticks)
 
         # Crossover (Point unique) point de coupure au hasard
