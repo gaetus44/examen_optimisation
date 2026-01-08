@@ -5,7 +5,7 @@ class ConnectionGene:
         self.out_node = out_node # Où ça arrive
         self.weight = weight # La force (Synapse)
         self.enabled = enabled # Actif ou Pas ?
-        self.innovation = innovation # Num d'innovation
+        self.innovation = innovation # Numero d'innovation
 
     def copy(self):
         return ConnectionGene(self.in_node, self.out_node, self.weight, self.enabled, self.innovation)
