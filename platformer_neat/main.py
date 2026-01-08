@@ -136,6 +136,9 @@ class GameRunner:
                 out = net.activate(inputs)
                 # On trie les sorties : la plus forte gagne
                 prefs = sorted(enumerate(out), key=lambda x: x[1], reverse=True)
+                # enumerate() crée des paires (Index, Score).
+                # Cela permet de trier par score tout en gardant l'index pour retrouver l'action correspondante dans ACTIONS_MAP.
+
                 chosen = moves[0]
 
                 # On cherche la première action "physiquement possible" parmi les préférences de l'IA
