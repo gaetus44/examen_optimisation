@@ -71,6 +71,7 @@ class FeedForwardNetwork:
                         self.values[node.id] = activated_val
                         state_changed = True
 
+            # Si plus rien ne bouge on arrete de calculer
             if not state_changed: break
 
         # Récupérer les sorties
