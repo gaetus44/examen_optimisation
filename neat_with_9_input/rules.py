@@ -212,7 +212,7 @@ def main():
     try:
         lvl = Level("level.txt")
     except FileNotFoundError:
-        print("Erreur: Le fichier 'level.txt' est manquant dans le dossier du projet.")
+        print("Erreur: Le fichier 'level1.txt' est manquant dans le dossier du projet.")
         return
 
     creature = Creature(lvl)

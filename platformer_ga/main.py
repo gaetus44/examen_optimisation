@@ -18,7 +18,7 @@ ELITISM_COUNT = 5
 
 
 # --- HELPER: CRÉATION FICHIER LEVEL ---
-def create_default_level_if_missing(filename="level.txt"):
+def create_default_level_if_missing(filename="level1.txt"):
     if not os.path.exists(filename):
         content = """60
 20 15
@@ -262,14 +262,14 @@ def draw_agents(screen, agents, level, best_agent=None):
 
 
 def main():
-    create_default_level_if_missing("level.txt")
+    create_default_level_if_missing("level1.txt")
 
     # Chargement
-    lvl = Level("level.txt")
+    lvl = Level("level1.txt")
 
     pygame.init()
     screen = pygame.display.set_mode((lvl.width * TILE_SIZE, lvl.height * TILE_SIZE))
-    pygame.display.set_caption("Platformer GA - Lvl: 1")
+    pygame.display.set_caption("Platformer GA")
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("Arial", 18)
 
