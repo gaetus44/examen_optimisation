@@ -98,6 +98,7 @@ class Agent:
             self.finished = True
             return
 
+        # Quand il a utilisé tout ses ticks
         if self.creature.tick >= self.creature.level.n_ticks:
             self.finished = True
             return
@@ -148,16 +149,28 @@ class Agent:
 def get_parent_roulette(agents, weights, total_weight):
     """
     Sélectionne un parent en utilisant les poids (fitness exponentiel).
+    Plus le poids est grand, plus l'agent a une "grosse part du camembert" sur la roue.
     """
+    # 1. On "lance la bille" sur la roue.
+    # On tire un nombre aléatoire entre 0 et la somme totale des poids.
     pick = random.uniform(0, total_weight)
+
     current = 0
 
+    # 2. On parcourt la roue segment par segment
+    # zip(agents, weights) permet de lire la liste des agents et celle des poids en même temps
     for agent, weight in zip(agents, weights):
-        current += weight
+        current += weight  # On ajoute la taille de la part de cet agent à l'accumulateur
+
+        # 3. Vérification : Est-ce que la bille s'est arrêtée dans cette zone ?
+        # Si notre accumulateur dépasse le nombre tiré ('pick'), c'est qu'on est tombé sur cet agent.
         if current > pick:
             return agent
 
-    return agents[-1]  # Sécurité
+    # 4. Filet de sécurité
+    # il peut arriver qu'on dépasse la boucle. Dans ce cas, on retourne le dernier.
+    return agents[-1]
+
 
 
 def evolve(agents, level):
@@ -189,8 +202,8 @@ def evolve(agents, level):
         parent_a = get_parent_roulette(sorted_agents, weights, total_weight)
         parent_b = get_parent_roulette(sorted_agents, weights, total_weight)
 
+        # Verification si les 2 sont pas les mêmes ont retire au sort le parent b
         while parent_a == parent_b:
-            parent_a = get_parent_roulette(sorted_agents, weights, total_weight)
             parent_b = get_parent_roulette(sorted_agents, weights, total_weight)
 
         child_dna = DNA(level.n_ticks)
