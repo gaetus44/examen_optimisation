@@ -110,7 +110,7 @@ class Population:
 
 class GameRunner:
     def run_genome(self, genome, draw_mode=False):
-        lvl = Level("level.txt"); c = Creature(lvl); net = FeedForwardNetwork(genome)
+        lvl = Level("level3.txt"); c = Creature(lvl); net = FeedForwardNetwork(genome)
         if draw_mode: pygame.init(); screen = pygame.display.set_mode((lvl.width*TILE_SIZE, lvl.height*TILE_SIZE)); clock = pygame.time.Clock()
         start_dist = math.sqrt((lvl.goal_pos[0]-c.x)**2 + (lvl.goal_pos[1]-c.y)**2)
         while c.tick < lvl.n_ticks and not c.reached_goal:
@@ -136,6 +136,9 @@ class GameRunner:
                 out = net.activate(inputs)
                 # On trie les sorties : la plus forte gagne
                 prefs = sorted(enumerate(out), key=lambda x: x[1], reverse=True)
+                # enumerate() crée des paires (Index, Score).
+                # Cela permet de trier par score tout en gardant l'index pour retrouver l'action correspondante dans ACTIONS_MAP.
+
                 chosen = moves[0]
 
                 # On cherche la première action "physiquement possible" parmi les préférences de l'IA
