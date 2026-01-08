@@ -11,6 +11,9 @@ class InnovationCounter:
     def __init__(self):
         self.current, self.history = 0, {}
     def get_innovation(self, n1, n2):
+        # Si cette connexion (n1 -> n2) a déjà été inventée par quelqu'un dans l'histoire,
+        # je renvoie son ID historique existant.
+        # Sinon, je crée un nouveau numéro d'innovation.
         if (n1, n2) not in self.history: self.current += 1; self.history[(n1, n2)] = self.current
         return self.history[(n1, n2)]
 
@@ -18,6 +21,9 @@ class Species:
     def __init__(self, rep):
         self.representative, self.members, self.best_fitness, self.stagnation = rep, [rep], 0.0, 0
     def sort_and_update(self):
+        # Trie les membres par score.
+        # Vérifie si l'espèce progresse ou stagne (pour l'éteindre si elle devient nulle).
+        # Désigne le nouveau "Représentant" (le meilleur membre) pour la prochaine comparaison.
         self.members.sort(key=lambda x: x.fitness, reverse=True)
         if self.members[0].fitness > self.best_fitness: self.best_fitness, self.stagnation = self.members[0].fitness, 0
         else: self.stagnation += 1
@@ -96,13 +102,14 @@ class GameRunner:
             else:
                 # INJECTION DU BIAIS ICI : 5ème entrée à 1.0
                 inputs = [
-                    c.x/lvl.width,
-                    c.y/lvl.height,
-                    (lvl.goal_pos[0]-c.x)/lvl.width,
-                    (lvl.goal_pos[1]-c.y)/lvl.height,
+                    c.x/lvl.width, # Ma position X (Normalisée entre 0 et 1)
+                    c.y/lvl.height, # Ma position Y
+                    (lvl.goal_pos[0]-c.x)/lvl.width, # Distance X vers le but
+                    (lvl.goal_pos[1]-c.y)/lvl.height, # Distance Y vers le but
                     1.0 # LE BIAIS
                 ]
                 out = net.activate(inputs)
+                # On trie les sorties : la plus forte gagne
                 prefs = sorted(enumerate(out), key=lambda x: x[1], reverse=True)
                 chosen = moves[0]
                 for idx, v in prefs:

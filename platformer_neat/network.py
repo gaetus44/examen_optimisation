@@ -21,7 +21,8 @@ class FeedForwardNetwork:
 
         for i, val in enumerate(inputs):
             # On cherche le nœud input avec l'ID i (simplification, IDs fixes attendus)
-            self.values[i] = val
+            # 1. On remplit les neurones d'entrée avec les valeurs du jeu
+            self.values[i] = val # ID 0 = Input 0, ID 1 = Input 1...
 
         # Nœud de biais (souvent ID = num_inputs) - Ajoutons un biais virtuel à 1
         self.values['BIAS'] = 1.0
@@ -38,18 +39,19 @@ class FeedForwardNetwork:
         # Trier par ID assure souvent un semblant d'ordre topologique si IDs sont croissants
         nodes_to_process.sort(key=lambda x: x.id)
 
-        for _ in range(len(self.genome.nodes)):  # Pire cas de profondeur
+        # 1. On remplit les neurones d'entrée avec les valeurs du jeu
+        for _ in range(len(self.genome.nodes)):
 
             state_changed = False
             current_vals = self.values.copy()
 
             for node in nodes_to_process:
-                incoming_sum = 0.0
+                incoming_sum = 0.0 # La somme de tout ce qui arrive au neurone
                 has_input = False
 
                 # Chercher toutes les connexions entrant dans ce nœud
                 for conn in self.genome.connections:
-                    if not conn.enabled: continue
+                    if not conn.enabled: continue # On ignore les câbles coupés
                     if conn.out_node == node.id:
                         # Si le nœud source a une valeur calculée
                         source_val = 0.0
@@ -63,6 +65,7 @@ class FeedForwardNetwork:
 
                 # Si on a reçu quelque chose (ou si c'est un nœud connecté au bias)
                 if has_input:
+                    # L'ACTIVATION (Sigmoïde)
                     activated_val = config.sigmoid(incoming_sum)
                     if node.id not in self.values or self.values[node.id] != activated_val:
                         self.values[node.id] = activated_val
