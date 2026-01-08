@@ -3,15 +3,21 @@ import math
 
 # --- NEAT CONFIGURATION ---
 POPULATION_SIZE = 60
-MAX_GENERATIONS = 1000
+MAX_GENERATIONS = 500
 INPUTS = 5                  # PosX, PosY, DistX_Goal, DistY_Goal, BIAIS (Fixe à 1.0)
 OUTPUTS = 9
 
 # Probabilités de mutation
 PROB_MUTATE_WEIGHT = 0.8
-PROB_ADD_CONNECTION = 0.4
-PROB_ADD_NODE = 0.3
+PROB_ADD_CONNECTION = 0.15
+PROB_ADD_NODE = 0.05
 WEIGHT_RANDOM_STRENGTH = 2.5
+
+# Settings level 3
+# PROB_MUTATE_WEIGHT = 0.8
+# PROB_ADD_CONNECTION = 0.30
+# PROB_ADD_NODE = 0.15
+# WEIGHT_RANDOM_STRENGTH = 2.5
 
 # --- SPÉCIATION ---
 DISTANCE_THRESHOLD = 1.2 # si < 1.2 => mis dans l'espèce sinon espece suivante
