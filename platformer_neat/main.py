@@ -46,7 +46,7 @@ class Population:
                 if g.get_distance(s.representative) < config.DISTANCE_THRESHOLD: s.members.append(g); found = True; break
             # Sinon, il fonde une nouvelle espèce
             if not found: self.species.append(Species(g))
-        # Supprime les espèces vides
+        # Supprime les espèces vides lié aux espèce qui stagnent
         self.species = [s for s in self.species if s.members]
 
     def run(self):
