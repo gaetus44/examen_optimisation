@@ -202,6 +202,9 @@ def evolve(agents, level):
         parent_a = get_parent_roulette(sorted_agents, weights, total_weight)
         parent_b = get_parent_roulette(sorted_agents, weights, total_weight)
 
+        if parent_a == parent_b :
+            parent_b = get_parent_roulette(sorted_agents, weights, total_weight)
+
         child_dna = DNA(level.n_ticks)
 
         # Crossover (Point unique) point de coupure au hasard
